@@ -96,16 +96,8 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Package version: $VERSION"
 
-      - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'latest'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.manual_version.outputs.version }}
-          release_name: Release v${{ steps.manual_version.outputs.version }}
-          draft: false
-          prerelease: false
+      # NOTE: Release creation via the workflow has been removed.
+      # Release creation can be performed manually from the Releases UI or via the GitHub CLI as needed.
 
       - name: Publish Success Notification
         if: success()
