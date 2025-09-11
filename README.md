@@ -514,11 +514,11 @@ import { AuthService, ApiKeysService } from './sdk';
 
 // Use services independently
 const auth = new AuthService({
-  baseURL: 'https://api.altus4.com/api/v1'
+  baseURL: 'https://api.altus4.com/api/v1',
 });
 
 const apiKeys = new ApiKeysService({
-  baseURL: 'https://api.altus4.com/api/v1'
+  baseURL: 'https://api.altus4.com/api/v1',
 });
 
 const loginResult = await auth.handleLogin(credentials);
