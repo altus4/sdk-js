@@ -1,6 +1,6 @@
 {
   "name": "@altus4/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official TypeScript SDK for Altus 4 - AI-Enhanced MySQL Full-Text Search Engine",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
