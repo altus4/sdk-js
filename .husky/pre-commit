@@ -1,5 +1,3 @@
 #!/bin/sh
-.
-. "$(dirname "$0")/_/husky.sh"
-
-npx --no-install lint-staged
+# Simplified pre-commit hook: directly run lint-staged to avoid sourcing husky shim
+exec npx --no-install lint-staged
