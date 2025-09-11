@@ -7,6 +7,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import type { ClientConfig } from './config';
 import type { ApiResponse } from '../types/common';
+import { TokenStorageManager } from '../utils/token-storage';
 
 /**
  * Base client class that provides HTTP request functionality
@@ -23,6 +24,9 @@ export class BaseClient {
 
   constructor(config: ClientConfig = {}) {
     this.baseURL = config.baseURL || 'http://localhost:3000/api/v1';
+
+    // Initialize token from storage on construction
+    this.initializeTokenFromStorage();
 
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -157,38 +161,36 @@ export class BaseClient {
   }
 
   /**
+   * Initialize token from persistent storage on SDK instantiation
+   */
+  private initializeTokenFromStorage(): void {
+    const token = TokenStorageManager.getToken();
+    if (token) {
+      this.token = token;
+    }
+  }
+
+  /**
    * Get stored authentication token
    */
   protected getToken(): string | null {
-    // Prefer localStorage when available for backward compatibility with older consumers/tests.
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('altus4_token');
-        if (stored) {
-          return stored;
-        }
-      } catch (e) {
-        // ignore storage errors
-      }
+    // First check enhanced token storage
+    const storedToken = TokenStorageManager.getToken();
+    if (storedToken) {
+      this.token = storedToken; // Sync memory with storage
+      return storedToken;
     }
 
+    // Fallback to memory token
     return this.token;
   }
 
   /**
    * Store authentication token
    */
-  protected setToken(token: string, _expiresIn?: number): void {
-    // expiresIn accepted for compatibility with subclasses but not stored here
-    void _expiresIn;
+  protected setToken(token: string, expiresIn?: number): void {
     this.token = token;
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('altus4_token', token);
-      } catch (e) {
-        // ignore
-      }
-    }
+    TokenStorageManager.saveToken(token, expiresIn);
   }
 
   /**
@@ -196,13 +198,7 @@ export class BaseClient {
    */
   protected clearToken(): void {
     this.token = null;
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        localStorage.removeItem('altus4_token');
-      } catch (e) {
-        // ignore
-      }
-    }
+    TokenStorageManager.clearToken();
   }
 
   /**

@@ -11,13 +11,26 @@ import type {
   UpdateProfileRequest,
   User,
 } from '../types/auth';
+import { TokenStorageManager } from '../utils/token-storage';
 
 export class AuthService extends BaseClient {
-  private tokenExpiry: number | null = null;
+  private currentUser: User | null = null;
 
   constructor(config: ClientConfig = {}) {
     super(config);
     // With cookie-based refresh flow, token is kept in memory and refresh is handled by server-side cookie
+    this.initializeFromStorage();
+  }
+
+  /**
+   * Initialize auth state from storage
+   */
+  private initializeFromStorage(): void {
+    const tokenData = TokenStorageManager.getTokenData();
+    if (tokenData) {
+      // Don't automatically fetch user here to avoid API calls during construction
+      // Token is automatically available through TokenStorageManager
+    }
   }
 
   // persistence responsibilities moved to server-side refresh cookie
@@ -143,8 +156,7 @@ export class AuthService extends BaseClient {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const token = this.getToken();
-    return token !== null && (this.tokenExpiry === null || Date.now() < this.tokenExpiry);
+    return TokenStorageManager.hasValidToken();
   }
 
   /**
@@ -159,8 +171,7 @@ export class AuthService extends BaseClient {
    * Set authentication token
    */
   override setToken(token: string, expiresIn?: number): void {
-    // store access token in-memory via BaseClient and track expiry locally
-    this.tokenExpiry = expiresIn ? Date.now() + expiresIn * 1000 : null;
+    // store access token in-memory via BaseClient and enhanced storage
     super.setToken(token, expiresIn);
   }
 
@@ -169,7 +180,7 @@ export class AuthService extends BaseClient {
    */
   override clearToken(): void {
     this.token = null;
-    this.tokenExpiry = null;
+    this.currentUser = null;
     super.clearToken();
   }
 
@@ -177,14 +188,11 @@ export class AuthService extends BaseClient {
    * Refresh token if needed
    */
   async refreshTokenIfNeeded(): Promise<boolean> {
-    if (!this.token || !this.tokenExpiry) {
+    if (!TokenStorageManager.hasValidToken()) {
       return false;
     }
 
-    const timeUntilExpiry = this.tokenExpiry - Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-
-    if (timeUntilExpiry < fiveMinutes) {
+    if (TokenStorageManager.isTokenExpiringSoon()) {
       try {
         const response = await this.request<{ token: string; expiresIn: number }>('/auth/refresh', {
           method: 'POST',
@@ -230,6 +238,77 @@ export class AuthService extends BaseClient {
    */
   public override getBaseURL(): string {
     return super.getBaseURL();
+  }
+
+  /**
+   * Get current authentication status for debugging
+   */
+  public getAuthStatus() {
+    return {
+      hasToken: !!this.getToken(),
+      hasValidToken: TokenStorageManager.hasValidToken(),
+      isExpiringSoon: TokenStorageManager.isTokenExpiringSoon(),
+      timeToExpiry: TokenStorageManager.getTimeToExpiry(),
+      isAuthenticated: this.isAuthenticated(),
+      currentUser: this.currentUser,
+    };
+  }
+
+  /**
+   * Debug current token state (development only)
+   */
+  public debugTokenState(): void {
+    if (process.env['NODE_ENV'] === 'development') {
+      TokenStorageManager.debugTokenState();
+    }
+  }
+
+  /**
+   * Force refresh token (useful for testing)
+   */
+  public async forceRefreshToken(): Promise<boolean> {
+    try {
+      const response = await this.request<{ token: string; expiresIn: number }>('/auth/refresh', {
+        method: 'POST',
+        withCredentials: true,
+      });
+
+      if (response.success && response.data) {
+        this.setToken(response.data.token, response.data.expiresIn);
+        return true;
+      }
+    } catch (error) {
+      console.error('Force refresh failed:', error);
+    }
+    return false;
+  }
+
+  /**
+   * Initialize auth state and restore user data
+   * Call this method on app startup after creating the SDK instance
+   */
+  public async initializeAuthState(): Promise<boolean> {
+    // Check if we have a valid token
+    if (!TokenStorageManager.hasValidToken()) {
+      // Try to restore session from refresh token
+      const restored = await this.restoreSession();
+      if (!restored) {
+        return false;
+      }
+    }
+
+    // If we have a token, try to get current user
+    try {
+      const userResponse = await this.getCurrentUser();
+      if (userResponse.success && userResponse.user) {
+        this.currentUser = userResponse.user;
+        return true;
+      }
+    } catch (error) {
+      console.warn('Failed to get current user during initialization:', error);
+    }
+
+    return false;
   }
 
   /**
