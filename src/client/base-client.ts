@@ -14,6 +14,12 @@ import type { ApiResponse } from '../types/common';
 export class BaseClient {
   protected client: AxiosInstance;
   protected baseURL: string;
+  // Keep access token in memory only. Refresh token should be HttpOnly cookie managed by server.
+  protected token: string | null = null;
+  private refreshInProgress = false;
+  // The callback parameter name in the function type triggers a false-positive unused-var in ESLint
+  // eslint-disable-next-line no-unused-vars
+  private refreshQueue: Array<(success: boolean) => void> = [];
 
   constructor(config: ClientConfig = {}) {
     this.baseURL = config.baseURL || 'http://localhost:3000/api/v1';
@@ -45,13 +51,79 @@ export class BaseClient {
     this.client.interceptors.response.use(
       response => response,
       error => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized - clear token
+        const status = error.response?.status;
+        const originalRequest = error.config;
+
+        // Don't try to refresh when the refresh endpoint itself failed
+        if (
+          status === 401 &&
+          originalRequest &&
+          !originalRequest._retry &&
+          !originalRequest.url?.includes('/auth/refresh')
+        ) {
+          originalRequest._retry = true;
+          return this.attemptRefreshAndRetry(originalRequest, error);
+        }
+
+        if (status === 401) {
+          // final fallback: clear in-memory token
           this.clearToken();
         }
+
         return Promise.reject(error);
       }
     );
+  }
+
+  /**
+   * Attempt to refresh the access token using server-side HttpOnly refresh cookie
+   * and retry the original request. Ensures only one refresh request is in-flight.
+   */
+  private async attemptRefreshAndRetry(originalRequest: any, originalError: any) {
+    if (this.refreshInProgress) {
+      // Queue this request until refresh completes
+      return new Promise((resolve, reject) => {
+        this.refreshQueue.push((_success: boolean) => {
+          if (_success) {
+            // retry original request
+            originalRequest.headers = originalRequest.headers || {};
+            const token = this.getToken();
+            if (token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(this.client(originalRequest));
+          } else {
+            reject(originalError);
+          }
+        });
+      });
+    }
+
+    this.refreshInProgress = true;
+
+    try {
+      // Call refresh endpoint - the browser will send HttpOnly refresh cookie automatically when using withCredentials
+      const resp = await this.client.post('/auth/refresh', null, { withCredentials: true });
+      if (resp?.data?.token) {
+        this.setToken(resp.data.token);
+        // Drain queue with success
+        this.refreshQueue.forEach(cb => cb(true));
+        this.refreshQueue = [];
+
+        // Retry original request with new token
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${this.getToken()}`;
+        return this.client(originalRequest);
+      }
+    } catch (e) {
+      // refresh failed
+    }
+
+    // Refresh failed — clear token and drain queue with failure
+    this.clearToken();
+    this.refreshQueue.forEach(cb => cb(false));
+    this.refreshQueue = [];
+    return Promise.reject(originalError);
   }
 
   /**
@@ -88,18 +160,34 @@ export class BaseClient {
    * Get stored authentication token
    */
   protected getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('altus4_token');
+    // Prefer localStorage when available for backward compatibility with older consumers/tests.
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('altus4_token');
+        if (stored) {
+          return stored;
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
     }
-    return null;
+
+    return this.token;
   }
 
   /**
    * Store authentication token
    */
-  protected setToken(token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('altus4_token', token);
+  protected setToken(token: string, _expiresIn?: number): void {
+    // expiresIn accepted for compatibility with subclasses but not stored here
+    void _expiresIn;
+    this.token = token;
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('altus4_token', token);
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -107,8 +195,13 @@ export class BaseClient {
    * Clear authentication token
    */
   protected clearToken(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('altus4_token');
+    this.token = null;
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem('altus4_token');
+      } catch (e) {
+        // ignore
+      }
     }
   }
 

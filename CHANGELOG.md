@@ -140,3 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Database**: Add connections, test connectivity, list databases, health checks
 - **Analytics**: Dashboard data, search trends, performance insights
 - **Management**: System health, migration status, configuration
+
+## 1.0.6 - 2025-09-11
+
+- fix: include cookie-based refresh flow and auth persistence fixes (BaseClient + AuthService)

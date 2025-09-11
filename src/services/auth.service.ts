@@ -13,12 +13,14 @@ import type {
 } from '../types/auth';
 
 export class AuthService extends BaseClient {
-  private token: string | null = null;
   private tokenExpiry: number | null = null;
 
   constructor(config: ClientConfig = {}) {
     super(config);
+    // With cookie-based refresh flow, token is kept in memory and refresh is handled by server-side cookie
   }
+
+  // persistence responsibilities moved to server-side refresh cookie
 
   /**
    * Handle user login
@@ -29,6 +31,7 @@ export class AuthService extends BaseClient {
       {
         method: 'POST',
         data: credentials,
+        withCredentials: true,
       }
     );
 
@@ -57,6 +60,7 @@ export class AuthService extends BaseClient {
       {
         method: 'POST',
         data: userData,
+        withCredentials: true,
       }
     );
 
@@ -82,6 +86,7 @@ export class AuthService extends BaseClient {
   async handleLogout(): Promise<{ success: boolean; error?: any }> {
     const response = await this.request('/auth/logout', {
       method: 'POST',
+      withCredentials: true,
     });
 
     if (response.success) {
@@ -138,7 +143,8 @@ export class AuthService extends BaseClient {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return this.token !== null && (this.tokenExpiry === null || Date.now() < this.tokenExpiry);
+    const token = this.getToken();
+    return token !== null && (this.tokenExpiry === null || Date.now() < this.tokenExpiry);
   }
 
   /**
@@ -153,8 +159,9 @@ export class AuthService extends BaseClient {
    * Set authentication token
    */
   override setToken(token: string, expiresIn?: number): void {
-    this.token = token;
+    // store access token in-memory via BaseClient and track expiry locally
     this.tokenExpiry = expiresIn ? Date.now() + expiresIn * 1000 : null;
+    super.setToken(token, expiresIn);
   }
 
   /**
@@ -163,6 +170,7 @@ export class AuthService extends BaseClient {
   override clearToken(): void {
     this.token = null;
     this.tokenExpiry = null;
+    super.clearToken();
   }
 
   /**
@@ -180,6 +188,7 @@ export class AuthService extends BaseClient {
       try {
         const response = await this.request<{ token: string; expiresIn: number }>('/auth/refresh', {
           method: 'POST',
+          withCredentials: true,
         });
 
         if (response.success && response.data) {
@@ -189,6 +198,28 @@ export class AuthService extends BaseClient {
       } catch (error) {
         // Token refresh failed silently
       }
+    }
+
+    return false;
+  }
+
+  /**
+   * Attempt to restore session by calling the refresh endpoint which uses an HttpOnly refresh cookie.
+   * Returns true if a new access token was obtained and set in memory.
+   */
+  async restoreSession(): Promise<boolean> {
+    try {
+      const response = await this.request<{ token: string; expiresIn: number }>('/auth/refresh', {
+        method: 'POST',
+        withCredentials: true,
+      });
+
+      if (response.success && response.data) {
+        this.setToken(response.data.token, response.data.expiresIn);
+        return true;
+      }
+    } catch (e) {
+      // ignore
     }
 
     return false;
