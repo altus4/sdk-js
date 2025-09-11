@@ -1,4 +1,4 @@
-# Altus 4 TypeScript SDK
+# Altus 4 | TypeScript SDK
 
 A comprehensive TypeScript SDK for the Altus 4 AI-Enhanced MySQL Full-Text Search Engine. This SDK provides type-safe access to search analytics, database management, and AI-powered insights.
 
