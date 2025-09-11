@@ -21,17 +21,7 @@ Altus 4 enhances MySQL's native FULLTEXT search capabilities with AI-powered opt
 
 ```bash
 # Install dependencies
-npm install axios
-
-# Copy the SDK to your project
-cp -r /path/to/altus4/example/client/sdk ./src/
-```
-
-For production use, you may want to publish this SDK to a private npm registry:
-
-```bash
-npm pack
-npm publish --registry=https://your-registry.com
+npm install @altus4/sdk
 ```
 
 ## Quick Start
