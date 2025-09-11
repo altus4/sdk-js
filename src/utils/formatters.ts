@@ -43,7 +43,7 @@ export function titleCase(input: string): string {
   }
   return input
     .split(/\s+/)
-    .map(s => (s.length > 0 ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s))
+    .map(s => (s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s))
     .join(' ');
 }
 
