@@ -1,8 +1,4 @@
-/**
- * Basic SDK tests
- */
-
-import { Altus4SDK } from '../src';
+import { Altus4SDK } from './index';
 
 describe('Altus4SDK', () => {
   it('should instantiate successfully', () => {
