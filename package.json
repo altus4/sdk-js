@@ -37,11 +37,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/altus4/altus4-sdk-typescript.git"
+    "url": "git+https://github.com/altus4/sdk-js.git"
   },
-  "homepage": "https://github.com/altus4/altus4-sdk-typescript#readme",
+  "homepage": "https://github.com/altus4/sdk-js#readme",
   "bugs": {
-    "url": "https://github.com/altus4/altus4-sdk-typescript/issues"
+    "url": "https://github.com/altus4/sdk-js/issues"
   },
   "author": {
     "name": "Altus 4 Team",
