@@ -20,7 +20,6 @@ Altus 4 enhances MySQL's native FULLTEXT search capabilities with AI-powered opt
 ## Installation
 
 ```bash
-# Install dependencies
 npm install @altus4/sdk
 ```
 
