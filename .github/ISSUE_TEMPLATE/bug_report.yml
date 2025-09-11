@@ -1,0 +1,8 @@
+name: Bug report
+title: '[Bug]: '
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include steps to reproduce and environment details.

@@ -1,0 +1,61 @@
+name: SDK Release
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+
+jobs:
+  release:
+    name: Create SDK Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare npm
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm config set prefer-online true
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 10000
+          npm config set fetch-retry-maxtimeout 60000
+          npm cache clean --force
+
+      - name: Install dependencies
+        run: npm ci --no-audit
+
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - SDK packaged and published
+          draft: false
+          prerelease: false

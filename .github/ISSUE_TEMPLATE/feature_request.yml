@@ -1,0 +1,9 @@
+name: Feature Request
+description: Suggest an idea for the SDK
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your use case.

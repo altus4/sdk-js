@@ -1,0 +1,19 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm ci --no-audit
+      - name: Run audit
+        run: npm audit --audit-level=high || true
