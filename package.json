@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Official TypeScript SDK for Altus 4 - AI-Enhanced MySQL Full-Text Search Engine",
   "main": "dist/index.js",
-  "module": "dist/index.js",
+  "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
@@ -11,7 +11,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
     "build:watch": "tsc -p tsconfig.json --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -95,7 +95,7 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/esm/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },

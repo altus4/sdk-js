@@ -28,7 +28,7 @@ export class AnalyticsService extends BaseClient {
     request: DashboardAnalyticsRequest
   ): Promise<ApiResponse<AnalyticsData>> {
     return this.request('/analytics/dashboard', {
-      method: 'POST',
+      method: 'GET',
       data: request,
     });
   }
