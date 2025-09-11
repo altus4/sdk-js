@@ -7,36 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.2] - 2025-09-11
+## [1.0.3] - 2025-09-11
 
 ### Fixes (critical)
+
+- Persist authentication token to storage on login/register and clear it on logout by calling the base client storage helpers. This ensures tokens are written to `localStorage` and included in outgoing requests.
+
+### Changes (build)
+
+- Rebuilt `dist` and validated token persistence via smoke tests and unit tests.
+
+### Notes (release)
+
+- This is a critical bugfix release addressing session persistence and authorization header inclusion for browser consumers.
+
+## [1.0.2] - 2025-09-11
+
+### Fixes
 
 - Resolved package entrypoint resolution issue: `package.json` no longer points at a non-existent `dist/index.esm.js` (now references the existing `dist/index.js`), preventing Vite/rollup resolver failures.
 - Fixed `exports` and `module` fields in `package.json` to match distributed files so bundlers can resolve the package.
 
-### Changes (build)
+### Changes
 
 - Bumped package version to `1.0.2` and created tag `v1.0.2` on GitHub.
 - Made the `publish` workflow idempotent when the `package.json` version already matches the release tag (skip `npm version` if unchanged) to avoid CI failures.
 - Removed automatic GitHub Release creation from the publish workflow; releases can now be created manually or via the GitHub CLI.
 
-### Notes (release)
-
-- This release is primarily a packaging/CI fix to ensure downstream projects (for example Vite-based apps) can install and build against `@altus4/sdk` without resolver errors.
-
-## [1.0.3] - 2025-09-11
-
-### Fixes
-
-- Persist authentication token to storage on login/register and clear it on logout by calling the base client storage helpers. This ensures tokens are written to `localStorage` and included in outgoing requests.
-
-### Changes
-
-- Rebuilt `dist` and validated token persistence via smoke tests and unit tests.
-
 ### Notes
 
-- This is a critical bugfix release addressing session persistence and authorization header inclusion for browser consumers.
+- This release is primarily a packaging/CI fix to ensure downstream projects (for example Vite-based apps) can install and build against `@altus4/sdk` without resolver errors.
 
 ## [1.0.1] - 2025-09-11
 
