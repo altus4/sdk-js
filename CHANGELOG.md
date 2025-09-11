@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2025-09-11
+
+### Fixes (init)
+
+- Restore persisted authentication token on SDK initialization so new instances (or page refreshes) automatically pick up the stored token and remain authenticated.
+
+### Changes (behavior)
+
+- Persist token expiry to `localStorage` and restore it when available; improved isAuthenticated() behavior after initialization.
+
+### Notes (release notes)
+
+- This is a critical UX fix ensuring sessions survive page refresh and new SDK instances behave consistently.
+
 ## [1.0.3] - 2025-09-11
 
 ### Fixes (init)
@@ -37,20 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - This release is primarily a packaging/CI fix to ensure downstream projects (for example Vite-based apps) can install and build against `@altus4/sdk` without resolver errors.
-
-## [1.0.4] - 2025-09-11
-
-### Fixes (critical)
-
-- Restore persisted authentication token on SDK initialization so new instances (or page refreshes) automatically pick up the stored token and remain authenticated.
-
-### Changes (behavior)
-
-- Persist token expiry to `localStorage` and restore it when available; improved isAuthenticated() behavior after initialization.
-
-### Notes (release)
-
-- This is a critical UX fix ensuring sessions survive page refresh and new SDK instances behave consistently.
 
 ## [1.0.1] - 2025-09-11
 
