@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4
@@ -32,6 +34,23 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Get release version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Extract version from tag (remove 'v' prefix if present, handle both 1.x.x and v1.x.x)
+            VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Release version: $VERSION"
+          fi
+
+      - name: Update package version
+        if: github.event_name == 'release'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          npm version $VERSION --no-git-tag-version
+          echo "Updated package.json to version $VERSION"
 
       - name: Install dependencies
         run: npm ci
@@ -63,13 +82,30 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Get package version for manual release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'latest'
+        id: manual_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Package version: $VERSION"
+
       - name: Create GitHub Release
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'latest'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.PACKAGE_VERSION }}
-          release_name: Release v${{ env.PACKAGE_VERSION }}
+          tag_name: ${{ steps.manual_version.outputs.version }}
+          release_name: Release v${{ steps.manual_version.outputs.version }}
           draft: false
           prerelease: false
+
+      - name: Publish Success Notification
+        if: success()
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "✅ Successfully published @altus4/sdk@${{ steps.version.outputs.version }} to npm"
+          else
+            echo "✅ Successfully published @altus4/sdk with tag ${{ github.event.inputs.tag }} to npm"
+          fi
