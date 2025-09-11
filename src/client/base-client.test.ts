@@ -5,7 +5,7 @@ import type { ClientConfig } from './config';
 jest.mock('axios', () => {
   return {
     create: (cfg: any) => {
-      const requestInterceptors: Array<(c: any) => any> = [];
+      const requestInterceptors: any[] = [];
 
       const client: any = (reqCfg: any) => {
         // apply request interceptors
@@ -48,7 +48,7 @@ jest.mock('axios', () => {
           },
         },
         response: {
-          use: (_onFulfilled: any, _onRejected: any) => {
+          use: () => {
             // not needed for these tests
           },
         },
