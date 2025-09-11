@@ -5,7 +5,17 @@ All notable changes to the Altus 4 TypeScript SDK will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.5] - 2025-09-11
+
+### Changed
+
+- Introduced cookie-based refresh flow for browser clients: the SDK now uses an HttpOnly refresh cookie (server-managed) and keeps short-lived access tokens in memory. The SDK exposes `auth.restoreSession()` to obtain a fresh access token on app startup and will call `/auth/refresh` with credentials to refresh tokens on 401 responses.
+- Backward compatibility: when `localStorage` is available the SDK will still read/write `altus4_token` for older consumers, but the recommended configuration is cookie-based refresh for improved security.
+
+### Migration
+
+- Upgrade your backend to set a refresh token cookie on login (Set-Cookie: HttpOnly; Secure; SameSite=Lax) and implement POST `/auth/refresh` that returns `{ token, expiresIn }`.
+- Update browser apps to call `auth.restoreSession()` during bootstrap to restore logged-in state after page reloads.
 
 ## [1.0.4] - 2025-09-11
 

@@ -141,6 +141,56 @@ if (altus4.auth.isAuthenticated()) {
 }
 ```
 
+## Cookie-based authentication (recommended)
+
+Starting with the recent patch, the SDK supports a cookie-based refresh flow which is the recommended configuration for browser-based client apps.
+
+Why use cookie-based refresh?
+
+- The refresh token is stored as an HttpOnly, Secure cookie by your backend. This prevents JavaScript from reading the refresh token (stronger XSS protection).
+
+- The SDK keeps a short-lived access token in memory and automatically calls the refresh endpoint to obtain a new access token when needed.
+
+- No sensitive tokens are persisted to `localStorage` by default in this flow.
+
+Backend requirements
+
+- On successful login, your server should set a refresh token cookie using `Set-Cookie` with attributes: `HttpOnly; Secure; SameSite=Lax` (or `Strict` as appropriate).
+
+- Provide a POST `/auth/refresh` endpoint which reads the refresh cookie and returns a fresh access token JSON: `{ token: string, expiresIn: number }`.
+
+- Implement POST `/auth/logout` to clear the refresh cookie.
+
+Client integration (SPA)
+
+- On app startup call `auth.restoreSession()` (SDK exposes this helper) which calls `/auth/refresh` with credentials included and populates the SDK's in-memory access token if successful.
+
+- The SDK automatically retries requests that receive 401 by calling `/auth/refresh` and retrying the original request when a new access token is returned.
+
+Simple example (app bootstrap):
+
+```javascript
+import { AuthService } from '@altus4/sdk';
+
+const auth = new AuthService({ baseURL: '/api' });
+
+async function bootstrapApp() {
+  const restored = await auth.restoreSession();
+  if (restored && auth.isAuthenticated()) {
+    router.replace('/dashboard');
+  } else {
+    router.replace('/login');
+  }
+  mountApp();
+}
+
+bootstrapApp();
+```
+
+Migration note
+
+- If you previously relied on `localStorage` persistence, switch your backend to issue a refresh cookie and call `auth.restoreSession()` on app startup. The SDK still falls back to `localStorage` when available to preserve backward compatibility with older consumers.
+
 ### API Keys Service
 
 The ApiKeysService manages API keys for service-to-service authentication.
