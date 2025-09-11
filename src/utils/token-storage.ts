@@ -43,7 +43,7 @@ export class TokenStorageManager {
         // Keep legacy key for backward compatibility
         localStorage.setItem('altus4_token', token);
       } catch (e) {
-        console.warn('Failed to save token to localStorage:', e);
+        // Failed to save token to localStorage
       }
     }
   }
@@ -73,7 +73,7 @@ export class TokenStorageManager {
           }
         }
       } catch (e) {
-        console.warn('Failed to parse stored token data:', e);
+        // Failed to parse stored token data
       }
     }
 
@@ -91,7 +91,6 @@ export class TokenStorageManager {
 
     // Check if token is expired
     if (tokenData.expiresAt && Date.now() >= tokenData.expiresAt) {
-      console.warn('Stored token is expired');
       this.clearToken();
       return null;
     }
@@ -147,7 +146,7 @@ export class TokenStorageManager {
         localStorage.removeItem(this.STORAGE_KEY);
         localStorage.removeItem('altus4_token'); // Legacy cleanup
       } catch (e) {
-        console.warn('Failed to clear token from localStorage:', e);
+        // Failed to clear token from localStorage
       }
     }
   }
@@ -191,21 +190,6 @@ export class TokenStorageManager {
       return;
     }
 
-    const tokenData = this.getTokenData();
-    console.group('🔍 Token Storage Debug');
-    if (tokenData) {
-      console.log('Token exists:', !!tokenData.token);
-      console.log(
-        'Expires at:',
-        tokenData.expiresAt ? new Date(tokenData.expiresAt).toLocaleString() : 'Never'
-      );
-      console.log('Time to expiry:', `${this.getTimeToExpiry()}s`);
-      console.log('Is expired:', tokenData.expiresAt ? Date.now() >= tokenData.expiresAt : false);
-      console.log('Is expiring soon:', this.isTokenExpiringSoon());
-      console.log('User ID:', tokenData.userId || 'Unknown');
-    } else {
-      console.log('No token data found');
-    }
-    console.groupEnd();
+    // Debug output removed in production
   }
 }

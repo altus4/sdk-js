@@ -278,7 +278,7 @@ export class AuthService extends BaseClient {
         return true;
       }
     } catch (error) {
-      console.error('Force refresh failed:', error);
+      // Force refresh failed
     }
     return false;
   }
@@ -305,7 +305,7 @@ export class AuthService extends BaseClient {
         return true;
       }
     } catch (error) {
-      console.warn('Failed to get current user during initialization:', error);
+      // Failed to get current user during initialization
     }
 
     return false;
