@@ -10,23 +10,25 @@ global.console = {
   error: jest.fn(),
 };
 
-// Mock axios globally for all tests
-jest.mock('axios', () => ({
-  create: jest.fn(() => ({
-    interceptors: {
-      request: {
-        use: jest.fn(),
+// Only mock axios for unit tests, not integration tests
+if (process.env.ALTUS4_TEST_MODE !== 'integration') {
+  jest.mock('axios', () => ({
+    create: jest.fn(() => ({
+      interceptors: {
+        request: {
+          use: jest.fn(),
+        },
+        response: {
+          use: jest.fn(),
+        },
       },
-      response: {
-        use: jest.fn(),
-      },
-    },
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-  })),
-}));
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+    })),
+  }));
+}
 
 // Mock localStorage for browser environment tests
 const localStorageMock = {

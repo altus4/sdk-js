@@ -777,4 +777,4 @@ For issues, questions, or contributions:
 
 ## License
 
-This SDK is part of the Altus 4 project and follows the same license terms as the main application.
+This SDK is licensed under the Apache License, Version 2.0. See the included LICENSE file for the full terms.

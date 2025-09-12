@@ -1,17 +1,34 @@
 import { AuthService } from './auth.service';
+import { TokenStorageManager } from '../utils/token-storage';
+
+// Mock TokenStorageManager for Node.js environment
+jest.mock('../utils/token-storage');
+const mockTokenStorageManager = TokenStorageManager as jest.Mocked<typeof TokenStorageManager>;
 
 // Minimal ClientConfig stub
 const cfg = { baseURL: 'https://api.example.com/v1' } as any;
 
 describe('AuthService', () => {
+  beforeEach(() => {
+    // Reset mocks before each test
+    mockTokenStorageManager.hasValidToken.mockReturnValue(false);
+    mockTokenStorageManager.isTokenExpiringSoon.mockReturnValue(false);
+    mockTokenStorageManager.getTokenData.mockReturnValue(null);
+    mockTokenStorageManager.getToken.mockReturnValue(null);
+  });
+
   test('setToken and clearToken change isAuthenticated', () => {
     const svc = new AuthService(cfg);
 
     expect(svc.isAuthenticated()).toBe(false);
 
+    // Mock token storage to return valid token after setting
+    mockTokenStorageManager.hasValidToken.mockReturnValue(true);
     svc.setToken('token-123', 3600);
     expect(svc.isAuthenticated()).toBe(true);
 
+    // Mock token storage to return invalid token after clearing
+    mockTokenStorageManager.hasValidToken.mockReturnValue(false);
     svc.clearToken();
     expect(svc.isAuthenticated()).toBe(false);
   });
@@ -31,7 +48,11 @@ describe('AuthService', () => {
 
   test('refreshTokenIfNeeded calls refresh when near expiry', async () => {
     const svc = new AuthService(cfg);
-    // set a token that expires in 1 second
+
+    // Mock token storage to indicate valid token that's expiring soon
+    mockTokenStorageManager.hasValidToken.mockReturnValue(true);
+    mockTokenStorageManager.isTokenExpiringSoon.mockReturnValue(true);
+
     svc.setToken('token-xyz', 1);
 
     // replace request to simulate refresh endpoint
@@ -39,9 +60,6 @@ describe('AuthService', () => {
     const req = jest
       .spyOn<any, any>(svc as any, 'request')
       .mockImplementation(async () => mockResponse);
-
-    // wait briefly so token is considered near expiry
-    await new Promise(r => setTimeout(r, 50));
 
     const refreshed = await svc.refreshTokenIfNeeded();
     expect(refreshed).toBe(true);
@@ -162,6 +180,9 @@ describe('AuthService', () => {
 
   test('setToken without expiry sets tokenExpiry null and isAuthenticated true', () => {
     const svc = new AuthService(cfg);
+
+    // Mock token storage to return valid token after setting
+    mockTokenStorageManager.hasValidToken.mockReturnValue(true);
     svc.setToken('abc');
     expect(svc.isAuthenticated()).toBe(true);
   });
@@ -187,5 +208,192 @@ describe('AuthService', () => {
     expect(r2).toBe(false);
 
     req.mockRestore();
+  });
+
+  test('restoreSession returns true on successful refresh', async () => {
+    const svc = new AuthService(cfg);
+    const mockResponse = { success: true, data: { token: 'restored-token', expiresIn: 3600 } };
+    const req = jest.spyOn<any, any>(svc as any, 'request').mockResolvedValue(mockResponse);
+    const setTokenSpy = jest.spyOn<any, any>(svc as any, 'setToken');
+
+    const result = await svc.restoreSession();
+    expect(result).toBe(true);
+    expect(req).toHaveBeenCalledWith('/auth/refresh', {
+      method: 'POST',
+      withCredentials: true,
+    });
+    expect(setTokenSpy).toHaveBeenCalledWith('restored-token', 3600);
+
+    req.mockRestore();
+    setTokenSpy.mockRestore();
+  });
+
+  test('restoreSession returns false on failed refresh', async () => {
+    const svc = new AuthService(cfg);
+    const req = jest
+      .spyOn<any, any>(svc as any, 'request')
+      .mockRejectedValue(new Error('Refresh failed'));
+
+    const result = await svc.restoreSession();
+    expect(result).toBe(false);
+
+    req.mockRestore();
+  });
+
+  test('forceRefreshToken works like restoreSession', async () => {
+    const svc = new AuthService(cfg);
+    const mockResponse = { success: true, data: { token: 'forced-token', expiresIn: 1800 } };
+    const req = jest.spyOn<any, any>(svc as any, 'request').mockResolvedValue(mockResponse);
+
+    const result = await svc.forceRefreshToken();
+    expect(result).toBe(true);
+
+    req.mockRestore();
+  });
+
+  test('forceRefreshToken returns false on failure', async () => {
+    const svc = new AuthService(cfg);
+    const req = jest.spyOn<any, any>(svc as any, 'request').mockResolvedValue({ success: false });
+
+    const result = await svc.forceRefreshToken();
+    expect(result).toBe(false);
+
+    req.mockRestore();
+  });
+
+  test('getAuthStatus returns current auth state', () => {
+    const svc = new AuthService(cfg);
+
+    // Mock the TokenStorageManager methods
+    mockTokenStorageManager.hasValidToken.mockReturnValue(true);
+    mockTokenStorageManager.isTokenExpiringSoon.mockReturnValue(false);
+    mockTokenStorageManager.getTimeToExpiry.mockReturnValue(3600);
+
+    // Mock getToken to return a token
+    jest.spyOn<any, any>(svc as any, 'getToken').mockReturnValue('test-token');
+
+    const status = svc.getAuthStatus();
+    expect(status).toBeDefined();
+    expect(status.hasToken).toBe(true);
+    expect(status.hasValidToken).toBe(true);
+    expect(status.isExpiringSoon).toBe(false);
+    expect(status.timeToExpiry).toBe(3600);
+    expect(status.isAuthenticated).toBe(true);
+  });
+
+  test('debugTokenState calls TokenStorageManager in development', () => {
+    const svc = new AuthService(cfg);
+    const originalEnv = process.env['NODE_ENV'];
+
+    // Set development environment
+    process.env['NODE_ENV'] = 'development';
+
+    const debugSpy = jest.spyOn(mockTokenStorageManager, 'debugTokenState');
+
+    svc.debugTokenState();
+    expect(debugSpy).toHaveBeenCalled();
+
+    // Restore original environment
+    process.env['NODE_ENV'] = originalEnv;
+    debugSpy.mockRestore();
+  });
+
+  test('debugTokenState does nothing in non-development', () => {
+    const svc = new AuthService(cfg);
+    const originalEnv = process.env['NODE_ENV'];
+
+    // Set production environment
+    process.env['NODE_ENV'] = 'production';
+
+    const debugSpy = jest.spyOn(mockTokenStorageManager, 'debugTokenState');
+
+    svc.debugTokenState();
+    expect(debugSpy).not.toHaveBeenCalled();
+
+    // Restore original environment
+    process.env['NODE_ENV'] = originalEnv;
+    debugSpy.mockRestore();
+  });
+
+  test('initializeAuthState with valid token and user', async () => {
+    const svc = new AuthService(cfg);
+
+    // Mock valid token
+    mockTokenStorageManager.hasValidToken.mockReturnValue(true);
+
+    // Mock successful user fetch
+    const mockUser = { id: 'user1', email: 'test@example.com' };
+    const getUserSpy = jest.spyOn<any, any>(svc as any, 'getCurrentUser').mockResolvedValue({
+      success: true,
+      user: mockUser,
+    });
+
+    const result = await svc.initializeAuthState();
+    expect(result).toBe(true);
+    expect(getUserSpy).toHaveBeenCalled();
+
+    getUserSpy.mockRestore();
+  });
+
+  test('initializeAuthState restores session when no valid token', async () => {
+    const svc = new AuthService(cfg);
+
+    // Mock no valid token initially
+    mockTokenStorageManager.hasValidToken.mockReturnValue(false);
+
+    // Mock successful session restoration
+    const restoreSpy = jest.spyOn<any, any>(svc as any, 'restoreSession').mockResolvedValue(true);
+    const getUserSpy = jest.spyOn<any, any>(svc as any, 'getCurrentUser').mockResolvedValue({
+      success: true,
+      user: { id: 'user1' },
+    });
+
+    const result = await svc.initializeAuthState();
+    expect(result).toBe(true);
+    expect(restoreSpy).toHaveBeenCalled();
+
+    restoreSpy.mockRestore();
+    getUserSpy.mockRestore();
+  });
+
+  test('initializeAuthState returns false when restoration fails', async () => {
+    const svc = new AuthService(cfg);
+
+    // Mock no valid token initially
+    mockTokenStorageManager.hasValidToken.mockReturnValue(false);
+
+    // Mock failed session restoration
+    const restoreSpy = jest.spyOn<any, any>(svc as any, 'restoreSession').mockResolvedValue(false);
+
+    const result = await svc.initializeAuthState();
+    expect(result).toBe(false);
+
+    restoreSpy.mockRestore();
+  });
+
+  test('setBaseURL delegates to parent', () => {
+    const svc = new AuthService(cfg);
+    const setSpy = jest.spyOn<any, any>(
+      Object.getPrototypeOf(Object.getPrototypeOf(svc)),
+      'setBaseURL'
+    );
+
+    svc.setBaseURL('https://new.api.com');
+    expect(setSpy).toHaveBeenCalledWith('https://new.api.com');
+
+    setSpy.mockRestore();
+  });
+
+  test('getBaseURL delegates to parent', () => {
+    const svc = new AuthService(cfg);
+    const getSpy = jest.spyOn<any, any>(
+      Object.getPrototypeOf(Object.getPrototypeOf(svc)),
+      'getBaseURL'
+    );
+
+    svc.getBaseURL();
+    expect(getSpy).toHaveBeenCalled();
+
+    getSpy.mockRestore();
   });
 });
