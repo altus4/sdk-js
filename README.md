@@ -26,7 +26,7 @@ npm install @altus4/sdk
 ## Quick Start
 
 ```typescript
-import { Altus4SDK } from './sdk';
+import { Altus4SDK } from '@altus4/sdk';
 
 // Initialize the SDK
 const altus4 = new Altus4SDK({
@@ -163,20 +163,24 @@ Backend requirements
 
 Client integration (SPA)
 
-- On app startup call `auth.restoreSession()` (SDK exposes this helper) which calls `/auth/refresh` with credentials included and populates the SDK's in-memory access token if successful.
+- On app startup you can call `sdk.auth.restoreSession()` (SDK exposes this helper) which calls `/auth/refresh` with credentials included and populates the SDK's in-memory access token if successful. A higher-level helper `sdk.auth.initializeAuthState()` will attempt restore and then fetch the current user profile — useful during app bootstrap.
 
-- The SDK automatically retries requests that receive 401 by calling `/auth/refresh` and retrying the original request when a new access token is returned.
+- The SDK's `BaseClient` automatically retries requests that receive 401 by calling `/auth/refresh` and retrying the original request when a new access token is returned.
 
 Simple example (app bootstrap):
 
 ```javascript
-import { AuthService } from '@altus4/sdk';
+import { Altus4SDK } from '@altus4/sdk';
 
-const auth = new AuthService({ baseURL: '/api' });
+const sdk = new Altus4SDK({ baseURL: '/api' });
 
 async function bootstrapApp() {
-  const restored = await auth.restoreSession();
-  if (restored && auth.isAuthenticated()) {
+  // Try to restore session from HttpOnly refresh cookie
+  const restored = await sdk.auth.restoreSession();
+  // Or use initializeAuthState() which also fetches user profile if restored
+  // const restoredFull = await sdk.auth.initializeAuthState();
+
+  if (restored && sdk.auth.isAuthenticated()) {
     router.replace('/dashboard');
   } else {
     router.replace('/login');
@@ -189,7 +193,7 @@ bootstrapApp();
 
 Migration note
 
-- If you previously relied on `localStorage` persistence, switch your backend to issue a refresh cookie and call `auth.restoreSession()` on app startup. The SDK still falls back to `localStorage` when available to preserve backward compatibility with older consumers.
+- If you previously relied on `localStorage` persistence, switch your backend to issue a refresh cookie and call `sdk.auth.restoreSession()` or `sdk.auth.initializeAuthState()` on app startup. The SDK still falls back to `localStorage` when available to preserve backward compatibility with older consumers, but cookie-based refresh is recommended for new deployments.
 
 ### API Keys Service
 
