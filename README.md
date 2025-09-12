@@ -314,12 +314,12 @@ await altus4.database.updateDatabaseConnection('conn-123', {
 });
 ```
 
-**deleteDatabaseConnection(connectionId: string): Promise<ApiResponse<{success: boolean}>>**
+**removeDatabaseConnection(connectionId: string): Promise<ApiResponse<{success: boolean}>>**
 
 Remove a database connection configuration.
 
 ```typescript
-await altus4.database.deleteDatabaseConnection('conn-123');
+await altus4.database.removeDatabaseConnection('conn-123');
 ```
 
 **testDatabaseConnection(connectionId: string): Promise<ApiResponse<{connected: boolean; error?: string}>>**

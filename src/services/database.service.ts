@@ -38,6 +38,13 @@ export class DatabaseService extends BaseClient {
   }
 
   /**
+   * Get a specific database connection by ID
+   */
+  async getDatabaseConnection(connectionId: string): Promise<ApiResponse<DatabaseConnection>> {
+    return this.request(`/databases/${connectionId}`);
+  }
+
+  /**
    * Update a database connection
    */
   async updateDatabaseConnection(
