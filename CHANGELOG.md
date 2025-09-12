@@ -5,6 +5,26 @@ All notable changes to the Altus 4 TypeScript SDK will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2025-09-12
+
+### Added
+
+- `AuthService`: `auth.restoreSession()` and `auth.initializeAuthState()` to enable proactive session restoration during app bootstrap.
+
+### Changed
+
+- Implemented cookie-based refresh flow for browser clients: SDK uses an HttpOnly refresh cookie (server-managed) and keeps short-lived access tokens in memory. On 401, the refresh queue calls `POST /auth/refresh` (with credentials) and retries the failed request when a new access token is returned.
+- Improved token persistence handling in `TokenStorageManager` to maintain backward compatibility with `localStorage` while recommending the cookie-based approach for security.
+- Internal refactors:
+  - `src/client/base-client.ts` — refresh-on-401 flow and serialized refresh queue.
+  - `src/services/auth.service.ts` — session restore helpers.
+  - `src/utils/token-storage.ts` — centralized token read/write (memory + `localStorage` fallback).
+
+### Notes (release notes)
+
+- **Backend:** Set refresh token cookie on login (`Set-Cookie` with `HttpOnly; Secure; SameSite=Lax/Strict`) and implement `POST /auth/refresh` returning `{ token, expiresIn }`.
+- **Client:** Call `await sdk.auth.restoreSession()` (or `await sdk.auth.initializeAuthState()`) at app startup to populate the in-memory access token when a valid refresh cookie exists.
+
 ## [1.0.5] - 2025-09-11
 
 ### Changed
@@ -140,7 +160,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Database**: Add connections, test connectivity, list databases, health checks
 - **Analytics**: Dashboard data, search trends, performance insights
 - **Management**: System health, migration status, configuration
-
-## 1.0.6 - 2025-09-11
-
-- fix: include cookie-based refresh flow and auth persistence fixes (BaseClient + AuthService)
