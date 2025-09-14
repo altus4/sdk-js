@@ -7,7 +7,7 @@ describe('AnalyticsService', () => {
     jest.restoreAllMocks();
   });
 
-  test('getDashboardAnalytics gets from /analytics/dashboard with data', async () => {
+  test('getDashboardAnalytics gets from /analytics/dashboard with params', async () => {
     const spy = jest
       .spyOn(AnalyticsService.prototype as any, 'request')
       .mockResolvedValue({ success: true, data: { totalSearches: 123 } });
@@ -15,7 +15,7 @@ describe('AnalyticsService', () => {
     const res = await svc.getDashboardAnalytics(req);
     expect(spy).toHaveBeenCalledWith(
       '/analytics/dashboard',
-      expect.objectContaining({ method: 'GET', data: req })
+      expect.objectContaining({ method: 'GET', params: req })
     );
     expect(res.success).toBe(true);
   });

@@ -201,7 +201,7 @@ The ApiKeysService manages API keys for service-to-service authentication.
 
 #### Methods
 
-**createApiKey(keyData: CreateApiKeyRequest): Promise<ApiResponse<ApiKey>>**
+**createApiKey(keyData: CreateApiKeyRequest): Promise<ApiResponse<{ apiKey: ApiKey; secretKey: string }>>**
 
 Create a new API key with specified permissions and rate limiting.
 
@@ -212,7 +212,6 @@ const keyResponse = await altus4.apiKeys.createApiKey({
   permissions: ['search', 'analytics'],
   rateLimitTier: 'pro',
   expiresAt: '2024-12-31',
-  allowedIPs: ['192.168.1.0/24'], // Optional IP restrictions
 });
 ```
 
@@ -223,7 +222,7 @@ List all API keys for the authenticated user.
 ```typescript
 const keys = await altus4.apiKeys.listApiKeys();
 keys.data?.forEach(key => {
-  console.log(`${key.name}: ${key.status}`);
+  console.log(`${key.name}: ${key.isActive ? 'active' : 'inactive'}`);
 });
 ```
 
@@ -247,7 +246,7 @@ await altus4.apiKeys.updateApiKey('key-id-123', {
 });
 ```
 
-**revokeApiKey(keyId: string): Promise<ApiResponse<{success: boolean}>>**
+**revokeApiKey(keyId: string): Promise<ApiResponse<void>>**
 
 Revoke an API key, making it immediately invalid.
 
@@ -261,8 +260,8 @@ Get usage statistics for an API key.
 
 ```typescript
 const usage = await altus4.apiKeys.getApiKeyUsage('key-id-123');
-console.log('Requests today:', usage.data?.requestsToday);
-console.log('Rate limit remaining:', usage.data?.rateLimitRemaining);
+console.log('Requests this month:', usage.data?.requestsThisMonth);
+console.log('Quota used / limit:', usage.data?.quotaUsed, '/', usage.data?.quotaLimit);
 ```
 
 ### Database Service
@@ -271,7 +270,7 @@ The DatabaseService manages MySQL database connections and schema discovery.
 
 #### Methods
 
-**addDatabaseConnection(connectionData: CreateDatabaseConnectionRequest): Promise<ApiResponse<DatabaseConnection>>**
+**addDatabaseConnection(connectionData: AddDatabaseConnectionRequest): Promise<ApiResponse<DatabaseConnection>>**
 
 Add a new database connection configuration.
 
@@ -322,7 +321,7 @@ Remove a database connection configuration.
 await altus4.database.removeDatabaseConnection('conn-123');
 ```
 
-**testDatabaseConnection(connectionId: string): Promise<ApiResponse<{connected: boolean; error?: string}>>**
+**testDatabaseConnection(connectionId: string): Promise<ApiResponse<ConnectionTestResult>>**
 
 Test connectivity to a configured database.
 
@@ -350,7 +349,7 @@ The AnalyticsService provides access to search analytics and AI-powered insights
 
 #### Methods
 
-**getDashboardAnalytics(params?: TimeRangeParams): Promise<ApiResponse<DashboardAnalytics>>**
+**getDashboardAnalytics(request: { period: 'day' | 'week' | 'month' | 'year' }): Promise<ApiResponse<AnalyticsData>>**
 
 Get comprehensive dashboard analytics data.
 
@@ -365,7 +364,7 @@ console.log('Total searches:', dashboard.data?.totalSearches);
 console.log('Average response time:', dashboard.data?.averageResponseTime);
 ```
 
-**getSearchTrends(params?: TimeRangeParams): Promise<ApiResponse<TrendInsight[]>>**
+**getTrends(request: { period: 'day' | 'week' | 'month' | 'year'; startDate?: string; endDate?: string }): Promise<ApiResponse<AnalyticsTrends>>**
 
 Get search trend analysis and patterns.
 
@@ -375,17 +374,9 @@ const trends = await altus4.analytics.getSearchTrends({
 });
 ```
 
-**getPopularQueries(params?: TimeRangeParams): Promise<ApiResponse<PopularQuery[]>>**
+<!-- Popular queries endpoint is not currently exposed by the SDK -->
 
-Get the most popular search queries.
-
-```typescript
-const popular = await altus4.analytics.getPopularQueries({
-  period: 'month',
-});
-```
-
-**getSearchHistory(params?: SearchHistoryParams): Promise<ApiResponse<SearchAnalytics[]>>**
+**getSearchHistory(query?: AnalyticsQuery): Promise<ApiResponse<any[]>>**
 
 Get detailed search history with pagination.
 
@@ -398,19 +389,14 @@ const history = await altus4.analytics.getSearchHistory({
 });
 ```
 
-**getInsights(params?: TimeRangeParams): Promise<ApiResponse<AIInsight[]>>**
+**getInsights(request: { period: 'day' | 'week' | 'month' | 'year'; startDate?: string; endDate?: string }): Promise<ApiResponse<AnalyticsInsights>>**
 
 Get AI-generated insights and recommendations.
 
 ```typescript
-const insights = await altus4.analytics.getInsights({
-  period: 'month',
-});
-
-insights.data?.forEach(insight => {
-  if (insight.actionable) {
-    console.log('Recommendation:', insight.description);
-  }
+const insights = await altus4.analytics.getInsights({ period: 'month' });
+insights.data?.insights.forEach(insight => {
+  console.log(insight.title, '-', insight.description);
 });
 ```
 
@@ -420,7 +406,7 @@ The ManagementService provides system health checks and management operations.
 
 #### Methods
 
-**getSystemHealth(): Promise<ApiResponse<SystemHealth>>**
+**getSystemHealth(): Promise<ApiResponse<SystemStatus>>**
 
 Check overall system health and status.
 
@@ -430,7 +416,7 @@ console.log('System status:', health.data?.status);
 console.log('Uptime:', health.data?.uptime);
 ```
 
-**testConnection(): Promise<ApiResponse<{connected: boolean}>>**
+**testConnection(): Promise<ApiResponse<ConnectionTestResult>>**
 
 Test API connectivity and authentication.
 
@@ -491,25 +477,20 @@ const keyValidation = validateApiKeyCreation({
 
 ```typescript
 import {
-  formatNumber,
-  formatResponseTime,
-  formatRelativeTime,
-  getRateLimitInfo,
+  formatNumber, // 1,234,567
+  formatCompactNumber, // 1.23M
+  formatResponseTime, // 250ms / 1.50s
+  formatRelativeTime, // 1 hour ago
+  getRateLimitInfo, // { limit, name, description }
 } from './sdk/utils';
 
-// Number formatting
-console.log(formatNumber(1500)); // "1.5K"
-console.log(formatNumber(2500000)); // "2.5M"
-
-// Response time formatting
-console.log(formatResponseTime(250)); // "250ms"
+console.log(formatNumber(1234567)); // "1,234,567"
+console.log(formatCompactNumber(2500000)); // "2.50M"
 console.log(formatResponseTime(1500)); // "1.50s"
 
-// Relative time formatting
 const oneHourAgo = new Date(Date.now() - 3600000);
 console.log(formatRelativeTime(oneHourAgo)); // "1 hour ago"
 
-// Rate limit information
 const rateLimitInfo = getRateLimitInfo('pro');
 console.log(rateLimitInfo.description); // "10,000 requests per hour"
 ```
@@ -521,10 +502,10 @@ import { getDateRangeForPeriod, formatDateForQuery } from './sdk/utils';
 
 // Get date range for analytics periods
 const monthRange = getDateRangeForPeriod('month');
-console.log(monthRange); // { startDate: "2024-01-15", endDate: "2024-02-15" }
+console.log(monthRange); // { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD" }
 
 // Format dates for API queries
-const queryDate = formatDateForQuery(new Date()); // "2024-02-15"
+const queryDate = formatDateForQuery(new Date()); // "YYYY-MM-DD"
 ```
 
 ## Error Handling
@@ -551,13 +532,16 @@ try {
 
 ### Common Error Codes
 
-- `AUTHENTICATION_FAILED` - Invalid credentials
-- `TOKEN_EXPIRED` - JWT token has expired
-- `INVALID_TOKEN` - Malformed or invalid token
-- `FORBIDDEN` - Insufficient permissions
-- `VALIDATION_ERROR` - Request validation failed
-- `NETWORK_ERROR` - Network or connectivity issues
-- `RATE_LIMITED` - Rate limit exceeded
+The SDK normalizes network errors and forwards server error bodies as-is. Common codes in `ErrorCode`:
+
+- `VALIDATION_ERROR`
+- `AUTHENTICATION_ERROR`
+- `AUTHORIZATION_ERROR`
+- `NOT_FOUND`
+- `RATE_LIMIT_EXCEEDED`
+- `INTERNAL_ERROR`
+- `NETWORK_ERROR`
+- `DATABASE_ERROR`
 
 ## Advanced Usage
 
@@ -615,83 +599,7 @@ altus4.clearToken();
 
 ## Type Definitions
 
-The SDK is fully typed with comprehensive TypeScript definitions:
-
-```typescript
-import type {
-  User,
-  ApiKey,
-  DatabaseConnection,
-  DashboardAnalytics,
-  CreateApiKeyRequest,
-  TimeRangeParams,
-  ApiResponse,
-} from './sdk';
-
-// All API responses are properly typed
-const user: User | undefined = loginResult.user;
-const analytics: DashboardAnalytics | undefined = dashboardResult.data;
-
-// Request payloads are validated at compile time
-const createKeyRequest: CreateApiKeyRequest = {
-  name: 'My Key',
-  environment: 'test', // Type enforced: 'test' | 'live'
-  permissions: ['search', 'analytics'], // Type enforced array
-  rateLimitTier: 'free', // Type enforced: 'free' | 'pro' | 'enterprise'
-};
-```
-
-### Core Types
-
-**User Interface**
-
-```typescript
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'user';
-  connectedDatabases: string[];
-  createdAt: Date;
-  lastActive: Date;
-}
-```
-
-**ApiKey Interface**
-
-```typescript
-interface ApiKey {
-  id: string;
-  name: string;
-  key: string;
-  environment: 'test' | 'live';
-  permissions: Permission[];
-  rateLimitTier: 'free' | 'pro' | 'enterprise';
-  status: 'active' | 'revoked' | 'expired';
-  expiresAt?: string;
-  createdAt: Date;
-  lastUsed?: Date;
-}
-```
-
-**ApiResponse Wrapper**
-
-```typescript
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
-  meta?: {
-    timestamp: Date;
-    requestId: string;
-    version: string;
-  };
-}
-```
+The SDK is fully typed with comprehensive TypeScript definitions under `src/types` and re-exported from the package entry. Refer to those files for authoritative type shapes (e.g., `ApiResponse`, `User`, `ApiKey`, `Analytics*`, `Database*`, `Management*`).
 
 ## Browser and Node.js Compatibility
 

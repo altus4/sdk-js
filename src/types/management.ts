@@ -41,3 +41,12 @@ export interface SetupRequest {
   environment?: 'development' | 'staging' | 'production';
   features?: string[];
 }
+
+/**
+ * Migration status for system/auth changes
+ */
+export interface MigrationStatus {
+  hasMigrated: boolean;
+  recommendedAction?: string;
+  pendingSteps?: string[];
+}

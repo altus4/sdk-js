@@ -6,7 +6,12 @@
 
 import { BaseClient } from '../client/base-client';
 import type { ClientConfig } from '../client/config';
-import type { ConnectionTestResult, SetupRequest, SystemStatus } from '../types/management';
+import type {
+  ConnectionTestResult,
+  MigrationStatus,
+  SetupRequest,
+  SystemStatus,
+} from '../types/management';
 import type { ApiResponse } from '../types/common';
 
 export class ManagementService extends BaseClient {
@@ -29,6 +34,13 @@ export class ManagementService extends BaseClient {
   }
 
   /**
+   * Backward-compatible alias used in docs
+   */
+  async getSystemHealth(): Promise<ApiResponse<SystemStatus>> {
+    return this.getSystemStatus();
+  }
+
+  /**
    * Setup initial configuration
    */
   async setup(setupData: SetupRequest): Promise<ApiResponse<any>> {
@@ -43,6 +55,22 @@ export class ManagementService extends BaseClient {
    */
   async getMetrics(): Promise<ApiResponse<any>> {
     return this.request('/metrics');
+  }
+
+  /**
+   * Migration status for authentication/system changes
+   */
+  async getMigrationStatus(): Promise<ApiResponse<MigrationStatus>> {
+    return this.request('/management/migration-status');
+  }
+
+  /**
+   * Create initial API key for new installations
+   */
+  async setupInitialApiKey(): Promise<ApiResponse<any>> {
+    return this.request('/management/setup-initial-api-key', {
+      method: 'POST',
+    });
   }
 
   /**

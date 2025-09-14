@@ -111,5 +111,5 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "license": "MIT"
+  "license": "Apache-2.0"
 }

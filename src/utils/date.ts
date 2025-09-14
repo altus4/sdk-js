@@ -64,4 +64,46 @@ export function addDays(date: Date, days: number): Date {
 export function startOfDayUTC(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
+
+import type { Period } from '../types/common';
+
+/**
+ * Format a Date for query parameters as YYYY-MM-DD (UTC)
+ */
+export function formatDateForQuery(date: Date): string {
+  return formatYYYYMMDD(date);
+}
+
+/**
+ * Get a date range for a given analytics period.
+ * Returns strings in YYYY-MM-DD (UTC).
+ */
+export function getDateRangeForPeriod(
+  period: Period,
+  now: Date = new Date()
+): {
+  startDate: string;
+  endDate: string;
+} {
+  const end = startOfDayUTC(now);
+  let start: Date;
+  switch (period) {
+    case 'day':
+      start = addDays(end, -1);
+      break;
+    case 'week':
+      start = addDays(end, -7);
+      break;
+    case 'month':
+      start = addDays(end, -30);
+      break;
+    case 'year':
+      start = addDays(end, -365);
+      break;
+    default:
+      start = addDays(end, -7);
+  }
+  return { startDate: formatYYYYMMDD(start), endDate: formatYYYYMMDD(end) };
+}
+
 export * from './date';

@@ -29,7 +29,7 @@ export class AnalyticsService extends BaseClient {
   ): Promise<ApiResponse<AnalyticsData>> {
     return this.request('/analytics/dashboard', {
       method: 'GET',
-      data: request,
+      params: request,
     });
   }
 

@@ -37,6 +37,13 @@ export class ApiKeysService extends BaseClient {
   }
 
   /**
+   * Get a single API key by ID
+   */
+  async getApiKey(keyId: string): Promise<ApiResponse<ApiKey>> {
+    return this.request(`/keys/${keyId}`);
+  }
+
+  /**
    * Update an API key
    */
   async updateApiKey(keyId: string, updates: UpdateApiKeyRequest): Promise<ApiResponse<ApiKey>> {
