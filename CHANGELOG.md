@@ -60,4 +60,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Keys**: Create, list, update, revoke, monitor usage
 - **Database**: Add connections, test connectivity, list databases, health checks
 - **Analytics**: Dashboard data, search trends, performance insights
-- **Management**: System health, migration status, configuration
+  - **Management**: System health, migration status, configuration
+
+## [0.2.0] - 2025-09-14
+
+### Breaking Changes
+
+- ApiKeysService
+  - createApiKey now returns `{ apiKey, secretKey }` instead of `ApiKey`.
+  - revokeApiKey now returns `ApiResponse<void>` (no `{ success: boolean }` payload).
+- Utils
+  - formatNumber now uses grouped thousands (e.g., `1,234,567`). For compact notation (e.g., `1.23M`), use new `formatCompactNumber`.
+
+### Added
+
+- AnalyticsService
+  - Added `getPerformanceMetrics(params)` and `getUsageStats(period='week')`.
+  - All analytics GET endpoints now send query via `params`.
+- ManagementService
+  - Added `getSystemStatus()` (alias `getSystemHealth()` retained), `getMigrationStatus()`, `setup()`, `setupInitialApiKey()`, and `getMetrics()`.
+- Utils
+  - Date helpers: `formatYYYYMMDD`, `parseYYYYMMDD`, `addDays`, `startOfDayUTC`, `formatDateForQuery`, `getDateRangeForPeriod`.
+  - Format helpers: `formatCompactNumber`, `humanizeBytes`, `truncate`, `titleCase`.
+
+### Changed
+
+- Documentation updates in README to reflect new/updated method signatures and examples.
+- package.json license changed from MIT to Apache-2.0.
+
+### Migration Notes
+
+- Update any code relying on `createApiKey` to handle `{ apiKey, secretKey }` response.
+- Replace any checks on `revokeApiKey(...).data.success` with status checking only; the call now returns no body on success.
+- If you previously used `formatNumber` for compact display, switch to `formatCompactNumber`.
